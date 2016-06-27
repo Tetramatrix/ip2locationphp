@@ -1,10 +1,11 @@
 <?php
 /*
- * Copyright (C): 2016 Chi Hoang
+ * Copyright (C) 2016 Chi Hoang
  * All rights reserved
  *
  */
-require_once 'IP2Location.php';
+ 
+require_once 'IP2LocationCalc.php';
 echo ini_get("memory_limit")."\n";
 ini_set("memory_limit","1200M");
 
@@ -147,23 +148,23 @@ class hilbert {
     function hilbert2quad($hilbert) { 
      
         $r = $this->rev_map['a'][$hilbert >> 30]; 
-        $key.=$r[0];
+        $key = $r[0];
         $hilbert &= 1073741823;
      
         $r = $this->rev_map[$r[1]][$hilbert >> 28]; 
-        $key.=$r[0];
+        $key .= $r[0];
         $hilbert &= 268435455;        
       
         $r = $this->rev_map[$r[1]][$hilbert >> 26]; 
-        $key.=$r[0];
+        $key .= $r[0];
         $hilbert &= 67108863;
         
         $r = $this->rev_map[$r[1]][$hilbert >> 24]; 
-        $key.=$r[0];
+        $key .= $r[0];
         $hilbert &= 16777215;
       
         $r = $this->rev_map[$r[1]][$hilbert >> 22]; 
-        $key.=$r[0];
+        $key .= $r[0];
         
         return $key;
     }	
@@ -198,7 +199,7 @@ $db = new \IP2Location\Database('./databases/IP2LOCATION-LITE-DB11.BIN', \IP2Loc
 //51.254.178.243        => 44
 //51.254.16.72          => 5  
 
-//$h = new hilbert();
+$h = new hilbert();
 //$m = new morton();
 
 $kdx1=$key=$z=$y=0;
@@ -208,7 +209,7 @@ $s=ip2long("0.0.0.0");
 $e=ip2long("255.255.255.255");
 //$s=ip2long("53.0.0.0");
 //$e=ip2long("60.0.0.0");
-$e = sprintf('%u', ip2long("255.255.255.0"));
+//$e = sprintf('%u', ip2long("255.255.255.0"));
 
 /*
 echo $test=$db->readWord(65+113181696+32*1000)."\n";
@@ -228,7 +229,7 @@ die();
 */
 for ($i=$s;$i<$e;$i+=256) {
     
-    if($z==10000) {
+    if($z==9000) {
         //echo "$z,$i";
         $z=0;
         ++$key;
@@ -252,7 +253,7 @@ for ($i=$s;$i<$e;$i+=256) {
         ) {
         $lat=$records['latitude'];
         $long=$records['longitude'];
-        $cache[$i]=$db->idx;
+        //$cache[$i]=$db->idx;
         switch($result[$key][0]) {
             case 0:
                 $result[$key][0]=$db->idx;
@@ -289,8 +290,8 @@ echo $y.":".count($result);
 file_put_contents('file1.txt', "");
 file_put_contents('file2.txt', "");
 
-$kdx1=$kdx1bakup=$f1bakup=$idx1bakup=0;
-$end=false;
+$offset=$kdx1=$kdx1bakup=$f1bakup=$idx1bakup=0;
+$last=$end=false;
 $fb1=$fb2=$f1=$f2=0;$str1=$str2="";
 foreach ($result as $key => $fields)
 {
@@ -299,12 +300,17 @@ foreach ($result as $key => $fields)
         $f1=$fb1; $f2=$fb2;
     } else {
         $fb1=$f1=$fields[0];
-        if($fields[2]=="") {
+        if(isset($fields[2]) && $fields[2]=="") {
             $f2=$fb2;
         } else {
             $fb2=$f2=$fields[2];
         }
     }
+    if (($f2<$f1) || ($f2==0 && $f1==0)) {
+        ++$offset;
+        continue;
+    }
+    if ($end==true) continue;
     
     $bs1=(($f2+$f1)>>1);
     
@@ -316,8 +322,12 @@ foreach ($result as $key => $fields)
     };
        
     $kdx1 = $db->readWord(65+$f1*32);
+    if (($kdx1-$kdx1bakup)==0 && $last==true) continue;
+    $last = false;
+    
     $kdx2 = $end==false ? $db->readWord(65+$f2*32) : 3758095872+4193792*2;
     $kdx1 = $kdx1 == 16777216 ? 0 : $kdx1;
+    $kdx1 = $kdx1 == 16777472 ? 0 : $kdx1;
     
     $bs2=(($f1+$bs1)>>1);
     $bs3=(($bs1+$f2)>>1);
@@ -340,13 +350,6 @@ foreach ($result as $key => $fields)
     $bs14=(($bs3+$bs7)>>1);
     $bs15=(($bs7+$f2)>>1);
     
-    /*
-    echo "\nt:".($bs8*32).",".($bs4*32).",".($bs9*32).",".($bs2*32).",". 
-                ($bs10*32).",".($bs5*32).",".($bs11*32).",".($bs1*32).",".
-                ($bs12*32).",".($bs6*32).",".($bs13*32).",".($bs3*32).",".
-                ($bs14*32).",".($bs7*32).",".($bs15*32)."\n";    
-    */
-    
     $idx1 = $db->readWord(65+$bs8*32);    
     $idx2 = $db->readWord(65+$bs4*32);    
     $idx3 = $db->readWord(65+$bs9*32);    
@@ -363,12 +366,33 @@ foreach ($result as $key => $fields)
     $idx14 = $db->readWord(65+$bs7*32);    
     $idx15 = $db->readWord(65+$bs15*32);    
         
-    $str1 .= "\"".$key."\"=>[".($kdx1-$kdx1bakup).",".
-                             ($kdx2-$kdx1).",".
-                             (($f1*32)-$f1bakup).",".
-                            (($f2*32)-($f1*32)).",".
-                            (($bs1*32)-($f1*32)).",\"a\"=>[".
-                            ($idx1-$idx1bakup).",".
+    $str1 .= "\"".($key-$offset)."\"=>[\"".($kdx1-$kdx1bakup)."\",\"".
+                             ($kdx2-$kdx1)."\",\"".
+                             (($f1*32)-$f1bakup)."\",\"".
+                            (($f2*32)-($f1*32))."\",\"".
+                            (($bs1*32)-($f1*32))."\",\"a\"=>[\"".
+                            ($idx1-$idx1bakup)."\",\"".
+                            ($idx2-$idx1)."\",\"".
+                            ($idx3-$idx2)."\",\"".
+                            ($idx4-$idx3)."\",\"".
+                            ($idx5-$idx4)."\",\"".
+                            ($idx6-$idx5)."\",\"".
+                            ($idx7-$idx6)."\",\"".
+                            ($idx8-$idx7)."\",\"".
+                            ($idx9-$idx8)."\",\"".
+                            ($idx10-$idx9)."\",\"".
+                            ($idx11-$idx10)."\",\"".
+                            ($idx12-$idx11)."\",\"".
+                            ($idx13-$idx12)."\",\"".
+                            ($idx14-$idx13)."\",\"".
+                            ($idx15-$idx14)."\"]],";
+   
+   $str2 .= "\"".($key-$offset)."\"=>[".($kdx1).",".
+                             ($kdx2).",".
+                             (($f1*32)).",".
+                            (($f2*32)).",".
+                            (($bs1*32)).",\"a\"=>[".
+                            ($idx1).",".
                             ($idx2-$idx1).",".
                             ($idx3-$idx2).",".
                             ($idx4-$idx3).",".
@@ -383,13 +407,12 @@ foreach ($result as $key => $fields)
                             ($idx13-$idx12).",".
                             ($idx14-$idx13).",".
                             ($idx15-$idx14)."]],";
-   
+                            
     //echo ($kdx1-$kdx1bakup).",$kdx1bakup,$f1bakup,$idx1bakup\n";
     
     $kdx1bakup=$kdx1;
     $f1bakup=$f1*32;
-    $idx1bakup=$idx1;
-   
+    $idx1bakup=$idx1;  
    
     
     /*                       
@@ -435,6 +458,7 @@ foreach ($result as $key => $fields)
     */
 }
 file_put_contents('file1.txt', $str1, FILE_APPEND);
+file_put_contents('file2.txt', $str2, FILE_APPEND);
 
 /*
 $str="";
