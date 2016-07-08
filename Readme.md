@@ -1,4 +1,4 @@
-IP2Location PHP Library
+Better IP2Location PHP Library
 
 1. What is does it do?
 Better IP2Location PHP Library for faster query time.
