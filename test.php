@@ -3,7 +3,6 @@ require_once 'IP2Location.php';
 
 error_reporting(E_ALL);
 echo ini_get("memory_limit")."\n";
-ini_set("memory_limit","800M");
 ini_set('max_execution_time', 0);
 
 //Timer started

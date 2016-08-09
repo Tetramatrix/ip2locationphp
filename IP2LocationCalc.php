@@ -25,147 +25,6 @@
 
 namespace IP2Location;
 
-class hilbert {    
-   
-        //http://blog.notdot.net/2009/11/Damn-Cool-Algorithms-Spatial-indexing-with-Quadtrees-and-Hilbert-Curves
-    var $hilbert_map_1 = [  'a' => [
-                                    '0, 0' => [0, 'd'],
-                                    '0, 1' => [1, 'a'], 
-                                    '1, 0' => [3, 'b'],
-                                    '1, 1' => [2, 'a']
-                                ], 
-                            'b' => [ 
-                                   '0, 0' => [2, 'b'], 
-                                   '0, 1' => [1, 'b'], 
-                                   '1, 0' => [3, 'a'],
-                                   '1, 1' => [0, 'c']
-                                ], 
-                            'c' => [ 
-                                    '0, 0' => [2, 'c'],
-                                    '0, 1' => [3, 'd'],
-                                    '1, 0' => [1, 'c'],
-                                    '1, 1' => [0, 'b']
-                                   ], 
-                           'd' => [
-                                    '0, 0' => [0, 'a'], 
-                                    '0, 1' => [3, 'c'], 
-                                    '1, 0' => [1, 'd'], 
-                                    '1, 1' => [2, 'd']
-                                ],
-                        ];
-
-    var $rev_map = ['a' => [ 
-                                [2, 'd'], 
-                                [0, 'a'], 
-                                [3, 'a'], 
-                                [1, 'c'] 
-                            ], 
-                    'b' => [ 
-                                [3, 'c'], 
-                                [1, 'b'], 
-                                [2, 'b'], 
-                                [0, 'd'] 
-                    ], 
-                    'c' => [ 
-                                [3, 'b'], 
-                                [0, 'c'], 
-                                [2, 'c'], 
-                                [1, 'a'] 
-                    ], 
-                    'd' => [ 
-                                [2, 'a'], 
-                                [1, 'd'], 
-                                [3, 'd'], 
-                                [0, 'b'] 
-                    ], 
-                ];
-    	
-    function hilbert2quad($hilbert) {
-        
-        $point = [0,0,0,0];
-        $r = $this->rev_map['a'][$hilbert >> 30]; 
-        $point[$r[0]]+=32768;
-        $hilbert &= 1073741823;
-     
-        $r = $this->rev_map[$r[1]][$hilbert >> 28]; 
-        $point[$r[0]]+=16384;
-        $hilbert &= 268435455;        
-      
-        $r = $this->rev_map[$r[1]][$hilbert >> 26]; 
-        $point[$r[0]]+=8192;
-        $hilbert &= 67108863;
-        
-        $r = $this->rev_map[$r[1]][$hilbert >> 24]; 
-        $point[$r[0]]+=4096;
-        $hilbert &= 16777215;
-      
-        $r = $this->rev_map[$r[1]][$hilbert >> 22]; 
-        $point[$r[0]]+=2048;
-        $hilbert &= 4194303;
-      
-        $r = $this->rev_map[$r[1]][$hilbert >> 20]; 
-        $point[$r[0]]+=1024;
-        $hilbert &= 1044575;
-      
-        $r = $this->rev_map[$r[1]][$hilbert >> 18]; 
-        $point[$r[0]]+=512;
-        $hilbert &= 262143;
-      
-        $r = $this->rev_map[$r[1]][$hilbert >> 16]; 
-        $point[$r[0]]+=256;
-        $hilbert &= 65535;
-      
-        $r = $this->rev_map[$r[1]][$hilbert >> 14]; 
-        $point[$r[0]]+=128;
-        $hilbert &= 16383;
-      
-        $r = $this->rev_map[$r[1]][$hilbert >> 12]; 
-        $point[$r[0]]+=64;
-        $hilbert &= 4095;
-      
-        $r = $this->rev_map[$r[1]][$hilbert >> 10]; 
-        $point[$r[0]]+=32;
-        $hilbert &= 1023;
-      
-        $r = $this->rev_map[$r[1]][$hilbert >> 8]; 
-        $point[$r[0]]+=16;
-        $hilbert &= 255;
-      
-        $r = $this->rev_map[$r[1]][$hilbert >> 6]; 
-        $point[$r[0]]+=8;
-        $hilbert &= 63;
-        
-        $r = $this->rev_map[$r[1]][$hilbert >> 4]; 
-        $point[$r[0]]+=4;
-        $point[$this->rev_map[$r[1]][$hilbert & 15 >> 2][0]]+=2;
-        
-        list($x,$y,$z)=$point;
-        $x+=$z;
-        $y+=$z;
-        
-        $quad_x = $x & 32768 ? 1 : 0;
-        $quad_y = $y & 32768 ? 1 : 0;
-        list($quad1, $current_square) = $this->hilbert_map_1['a']["$quad_x, $quad_y"];
-        
-        $quad_x = $x & 16384 ? 1 : 0;
-        $quad_y = $y & 16384 ? 1 : 0;
-        list($quad2, $current_square) = $this->hilbert_map_1[$current_square]["$quad_x, $quad_y"];
-      
-        $quad_x = $x & 8192 ? 1 : 0;
-        $quad_y = $y & 8192 ? 1 : 0;
-        list($quad3, $current_square) = $this->hilbert_map_1[$current_square]["$quad_x, $quad_y"];
-      
-        $quad_x = $x & 4096 ? 1 : 0;
-        $quad_y = $y & 4096 ? 1 : 0;
-        list($quad4, $current_square) = $this->hilbert_map_1[$current_square]["$quad_x, $quad_y"];
-        
-        $quad_x = $x & 2048 ? 1 : 0;
-        $quad_y = $y & 2048 ? 1 : 0;
-        return $this->k["$quad1$quad2$quad3$quad4".$this->hilbert_map_1[$current_square]["$quad_x, $quad_y"][0]];
-    }	
-}
-
-
 /**
  * IP2Location database class
  *
@@ -782,10 +641,7 @@ class Database {
     
     error_reporting(E_ALL);
     ini_set("display_errors",1);
-    //ini_set("memory_limit","300M");
-    
-    $this->h = new hilbert();
-    
+      
     // find the referred file and its size
     $rfile = self::findFile($file);
     $size  = filesize($rfile);
@@ -896,25 +752,6 @@ class Database {
     $this->ipCount[6]     = $this->readWord(14);
     $this->ipBase[6]      = $this->readWord(18);
 
-    if ($this->ipCount[4] == 3799577) {
-        foreach ($this->h->k as $key => $val) {
-            $this->h->k[$key][0]-=10000;
-            if ($this->h->k[$key][0]<0) {
-                $this->h->k[$key][0]=0;
-            }
-            $this->h->k[$key][1]+=17935;
-            $this->h->k[$key][2]=($this->h->k[$key][0]+$this->h->k[$key][1]) >> 1;
-        }
-    }
-    
-    if (strncasecmp(PHP_OS, 'WIN', 3) == 0) {
-        $p=$this->ipCount[4];
-        $list=array_keys($this->h->k);
-        for ($i=500,$e=count($this->h->k);$i<$e;$i++) {
-            $this->h->k[$list[$i]][1]=$p;
-            $this->h->k[$list[$i]][2]=($this->h->k[$list[$i]][0]+$this->h->k[$list[$i]][1]) >> 1;
-        }
-    }
   }
 
 
